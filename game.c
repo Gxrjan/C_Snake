@@ -6,52 +6,58 @@
 #include<pthread.h>
 
 
-void init_board(Matrix *m, int rows, int columns)
+void init_snake(Snake *s, int len, int di, int dj)
 {
-    *m = malloc(rows*sizeof(Array));
-    for (int j=0;j<columns;j++) {
-        (*m)[j] = malloc(columns*sizeof(int));
+    *s = malloc(len*sizeof(Cell));
+    for (int n=0;n<len;n++) {
+        (*s)[n].i = 0;
+        (*s)[n].j = len-n;
+        (*s)[n].di = di;
+        (*s)[n].dj = dj;
+        
     }
+        
 }
+
+
+int belongs_to_snake(Snake *s, int len,  int i, int j)
+{
+    for (int n=0;n<len;n++)
+        if ((*s)[n].i==i && (*s)[n].j==j)
+            return 1;
+    return 0;
+}
+
 
 void print_board(Game *g)
 {
-    //update_board(g);
-    g->board[g->c.i][g->c.j] = 1;
     for (int i=0;i<g->rows;i++)
-        for (int j=0;j<g->columns;j++)
-            printf("%c%s", (g->board[i][j]==1) ? 'o' : ' ', ((j==g->columns-1) ? "\n" : ""));
-}
-
-void load_new_frame(Game *g)
-{
-    g->board[g->c.i][g->c.j] = 0;
-    g->c.i = (g->c.i + g->c.direction.di) % g->rows;
-    if (g->c.i == -1)
-        g->c.i = g->rows-1;
-    g->c.j = (g->c.j + g->c.direction.dj) % g->rows;
-    if (g->c.j == -1)
-        g->c.j = g->columns-1;
-    g->board[g->c.i][g->c.j] = 1;
+        for (int j=0;j<g->columns;j++) {
+            if (belongs_to_snake(&(g->s), g->len, i, j))
+                printf("%c", 'o');
+            else
+                printf(" ");
+            if (j==g->columns-1)
+                printf("\n");
+        }
+                        
 }
 
 
 void init_game(Game *g, int rows, int columns)
 {
-    init_board(&(g->board), rows, columns);
-    init_cell(&(g->c), 0, 0, 0, 1);
+    init_snake(&(g->s), 2, 0, 1);
     g->rows = rows;
     g->columns = columns;
-    g->i=0;
-    g->j=0; 
+    g->len = 2;
 }
 
 void init_cell(Cell *c, int i, int j, int di, int dj)
 {
     c->i = i;
     c->j = j;
-    c->direction.di = di;
-    c->direction.dj = dj;
+    c->di = di;
+    c->dj = dj;
 }
 
 int valid(Game *g, int i, int j)
@@ -61,39 +67,45 @@ int valid(Game *g, int i, int j)
 
 void step_forward(Game *g)
 {
-    g->c.i += g->c.direction.di;
-    g->c.j += g->c.direction.dj;
+    for (int n=0;n<g->len;n++) {
+        g->s[n].i = (g->s[n].i + g->s[n].di) % g->rows;
+        if (g->s[n].i == -1)
+            g->s[n].i = g->rows - 1;
+        g->s[n].j = (g->s[n].j + g->s[n].dj) % g->columns;
+        if (g->s[n].j == -1)
+            g->s[n].j = g->columns - 1;
+    }
 }
 
-int move_player(Game *g, char d)
-{
-    switch(d) {
-        case 'w':
-            g->c.direction.di = -1;
-            g->c.direction.dj = 0; 
-            return 1;
-            break;
-        case 's':
-            g->c.direction.di = 1;
-            g->c.direction.dj = 0;
-            return 1; 
-            break;
-        case 'd':
-            g->c.direction.di = 0;
-            g->c.direction.dj = 1; 
-            return 1;
-            break;
-        case 'a':
-            g->c.direction.di = 0;
-            g->c.direction.dj = -1; 
-            return 1;
-            break;
-        default:
-            return 0;
-            break;
-    }
-    return 0;
-}
+//int move_player(Game *g, char d)
+//{
+//    switch(d) {
+//        case 'w':
+//            g->c.direction.di = -1;
+//            g->c.direction.dj = 0; 
+//            return 1;
+//            break;
+//        case 's':
+//            g->c.direction.di = 1;
+//            g->c.direction.dj = 0;
+//            return 1; 
+//            break;
+//        case 'd':
+//            g->c.direction.di = 0;
+//            g->c.direction.dj = 1; 
+//            return 1;
+//            break;
+//        case 'a':
+//            g->c.direction.di = 0;
+//            g->c.direction.dj = -1; 
+//            return 1;
+//            break;
+//        default:
+//            return 0;
+//            break;
+//    }
+//    return 0;
+//}
 
 
 void start(Game *g)
@@ -105,8 +117,8 @@ void start(Game *g)
         //update_board(g);
         //cmd = getch();
         //move_player(g, cmd);
+        step_forward(g);
         sleep(1);
-        load_new_frame(g);
         system("clear");
         print_board(g);
     }
@@ -117,7 +129,7 @@ static void * get_cmd(void *g)
     while (1) {
         char cmd = -1;
         cmd = getch();
-        move_player(g, cmd);
+        //move_player(g, cmd);
     }
 }
 
@@ -126,8 +138,8 @@ int main(int argc, char *argv[])
     int status;
     Game g;
     init_game(&g, 20, 20);
-    pthread_t cmd_thread;
-    status = pthread_create(&cmd_thread, NULL, get_cmd, &g);
+    //pthread_t cmd_thread;
+    //status = pthread_create(&cmd_thread, NULL, get_cmd, &g);
 
 
     start(&g);
