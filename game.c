@@ -44,12 +44,15 @@ void print_board(Game *g)
 }
 
 
-void init_game(Game *g, int rows, int columns)
+void init_game(Game *g, int rows, int columns, int start_len)
 {
-    init_snake(&(g->s), 2, 0, 1);
+    init_snake(&(g->s), start_len, 0, 1);
+    init_queue(&(g->q));
+    pthread_mutex_init(&(g->lock), NULL);
     g->rows = rows;
     g->columns = columns;
-    g->len = 2;
+    g->len = start_len;
+    g->changes_len = 0;
 }
 
 void init_cell(Cell *c, int i, int j, int di, int dj)
@@ -77,36 +80,109 @@ void step_forward(Game *g)
     }
 }
 
-//int move_player(Game *g, char d)
-//{
-//    switch(d) {
-//        case 'w':
-//            g->c.direction.di = -1;
-//            g->c.direction.dj = 0; 
-//            return 1;
-//            break;
-//        case 's':
-//            g->c.direction.di = 1;
-//            g->c.direction.dj = 0;
-//            return 1; 
-//            break;
-//        case 'd':
-//            g->c.direction.di = 0;
-//            g->c.direction.dj = 1; 
-//            return 1;
-//            break;
-//        case 'a':
-//            g->c.direction.di = 0;
-//            g->c.direction.dj = -1; 
-//            return 1;
-//            break;
-//        default:
-//            return 0;
-//            break;
-//    }
-//    return 0;
-//}
+int move_player(Game *g, char d)
+{
+   // pthread_mutex_lock(&(g->lock));
+    int k = 0;
+    int status;
+    while ((status = pthread_mutex_trylock(&(g->lock))) != 0) {
+        if (k == 0) {
+            printf("Trying to lock: %d\n", status);
+            k++;
+        }
+    }
+    printf("Move got lock\n");
+    Dirchange change;
+    change.index = 0;
+    switch(d) {
+        case 'w':
+            change.di = -1;
+            change.dj = 0;
+            enqueue(&(g->q), change);
+            pthread_mutex_unlock(&(g->lock));
+            return 1;
+            break;
+        case 's':
+            change.di = 1;
+            change.dj = 0;
+            enqueue(&(g->q), change);
+            pthread_mutex_unlock(&(g->lock));
+            return 1; 
+            break;
+        case 'd':
+            change.di = 0;
+            change.dj = 1;
+            enqueue(&(g->q), change);
+            pthread_mutex_unlock(&(g->lock));
+            return 1;
+            break;
+        case 'a':
+            change.di = 0;
+            change.dj = -1;
+            enqueue(&(g->q), change);
+            pthread_mutex_unlock(&(g->lock));
+            return 1;
+            break;
+        default:
+            pthread_mutex_unlock(&(g->lock));
+            return 0;
+            break;
+    }
+    return 0;
+    printf("About to release lock\n");
+    pthread_mutex_unlock(&(g->lock));
+    printf("Move released lock\n");
+}
 
+void apply_changes(Game *g)
+{
+    int k = 0;
+    int status;
+    while ((status = pthread_mutex_trylock(&(g->lock))) != 0) {
+        if (k == 0) {
+            printf("Apply Trying to lock: %d\n", status);
+            k++;
+        }
+    }
+    printf("Apply got lock\n");
+    Node *n;
+    for (n=g->q.head;n!=NULL;n=n->next) {
+        printf("Apply\n");
+        Dirchange ch = n->change;
+        g->s[ch.index].di = ch.di;
+        g->s[ch.index].dj = ch.dj;
+        n->change.index++;
+    }
+    printf("Apply About to release lock\n");
+
+    pthread_mutex_unlock(&(g->lock));
+    printf("Apply released lock\n");
+}
+
+
+void filter_changes(Game *g)
+{
+    int k = 0;
+    int status;
+    while ((status = pthread_mutex_trylock(&(g->lock))) != 0) {
+        if (k == 0) {
+            printf("Filter Trying to lock: %d\n", status);
+            k++;
+        }
+    }
+    //pthread_mutex_lock(&(g->lock));
+    printf("Filter got lock\n");
+    while (!is_empty(&(g->q))) {
+        printf("Filter\n");
+        if (peak(&(g->q)).index > g->len-1)
+            dequeue(&(g->q));
+        else
+            break;
+    }
+    printf("Filter About to release lock\n");
+    pthread_mutex_unlock(&(g->lock));
+    printf("Filter released lock\n");
+}
 
 void start(Game *g)
 {
@@ -117,8 +193,10 @@ void start(Game *g)
         //update_board(g);
         //cmd = getch();
         //move_player(g, cmd);
+        apply_changes(g);
+        filter_changes(g);
         step_forward(g);
-        sleep(1);
+        usleep(50000);
         system("clear");
         print_board(g);
     }
@@ -129,7 +207,8 @@ static void * get_cmd(void *g)
     while (1) {
         char cmd = -1;
         cmd = getch();
-        //move_player(g, cmd);
+        if (cmd != -1)
+            move_player(g, cmd);
     }
 }
 
@@ -137,11 +216,13 @@ int main(int argc, char *argv[])
 {
     int status;
     Game g;
-    init_game(&g, 20, 20);
-    //pthread_t cmd_thread;
-    //status = pthread_create(&cmd_thread, NULL, get_cmd, &g);
-
-
+    init_game(&g, 20, 20, 10);
+    pthread_t cmd_thread;
+    status = pthread_create(&cmd_thread, NULL, get_cmd, &g);
+    if (status != 0) {
+        printf("Error creating thread\n");
+        exit(-1);
+    }
     start(&g);
     return 0;
 }
