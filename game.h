@@ -44,6 +44,7 @@ typedef struct game {
     int changes_len;
     int rows, columns;
     int len;
+    int collision_detected;
 } Game;
 
 

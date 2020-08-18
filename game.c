@@ -58,6 +58,7 @@ void init_game(Game *g, int rows, int columns, int start_len)
     g->columns = columns;
     g->len = start_len;
     g->changes_len = 0;
+    g->collision_detected = 0;
 }
 
 void init_cell(Cell *c, int i, int j, int di, int dj)
@@ -84,6 +85,14 @@ void step_forward(Game *g)
             g->s[n].j = g->columns - 1;
     }
     int apple_eaten = 0;
+    int collision_detected = 0;
+    for (int n=1;n<g->len;n++) {
+        if (g->s[0].i == g->s[n].i && g->s[0].j==g->s[n].j) {
+            g->collision_detected = 1;
+            return;
+        }
+    }
+
     AppleNode *prev = NULL;
     AppleNode *n = g->apples;
     while (n!=NULL) {
@@ -207,7 +216,7 @@ void apply_changes(Game *g)
     //printf("Apply got lock\n");
     Node *n;
     for (n=g->q.head;n!=NULL;n=n->next) {
-        printf("Apply\n");
+        //printf("Apply\n");
         Dirchange ch = n->change;
         g->s[ch.index].di = ch.di;
         g->s[ch.index].dj = ch.dj;
@@ -233,7 +242,7 @@ void filter_changes(Game *g)
     //pthread_mutex_lock(&(g->lock));
     //printf("Filter got lock\n");
     while (!is_empty(&(g->q))) {
-        printf("Filter\n");
+        //printf("Filter\n");
         if (peak(&(g->q)).index > g->len-1)
             dequeue(&(g->q));
         else
@@ -255,6 +264,12 @@ void start(Game *g)
         //move_player(g, cmd);
         apply_changes(g);
         step_forward(g);
+        if (g->collision_detected) {
+            system("clear");
+            print_board(g);
+            printf("Game over\n");
+            return;
+        }
         filter_changes(g);
         add_random_apple_with_possibility(g, 5, 1);
         usleep(DELAY);
@@ -326,5 +341,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     start(&g);
+     
     return 0;
 }
