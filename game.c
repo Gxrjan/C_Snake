@@ -1,10 +1,9 @@
 #include<stdio.h>
 #include"game.h"
 #include<stdlib.h>
-#include"conio.h"
 #include<unistd.h>
 #include<pthread.h>
-
+#include<termios.h>
 #define DELAY 300000
 
 
@@ -152,7 +151,7 @@ int move_player(Game *g, char d)
             k++;
         }
     }
-    printf("Move got lock\n");
+    //printf("Move got lock\n");
     Dirchange change;
     change.index = 0;
     switch(d) {
@@ -259,9 +258,6 @@ void start(Game *g)
     system("clear");
     print_board(g);
     while (1) {
-        //update_board(g);
-        //cmd = getch();
-        //move_player(g, cmd);
         apply_changes(g);
         step_forward(g);
         if (g->collision_detected) {
@@ -283,7 +279,7 @@ static void * get_cmd(void *g)
 {
     while (1) {
         char cmd = -1;
-        cmd = getch();
+        cmd = getchar();
         if (cmd != -1)
             move_player(g, cmd);
     }
@@ -331,8 +327,10 @@ void add_random_apple_with_possibility(Game *g, int bound, int attempts)
 
 int main(int argc, char *argv[])
 {
+
     int status;
     Game g;
+
     init_game(&g, 20, 20, 2);
     pthread_t cmd_thread;
     status = pthread_create(&cmd_thread, NULL, get_cmd, &g);
@@ -340,7 +338,17 @@ int main(int argc, char *argv[])
         printf("Error creating thread\n");
         exit(-1);
     }
+
+    // prepare console for input
+    struct termios oldattr, newattr;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+
     start(&g);
-     
+
+    // Reset console
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
     return 0;
 }
