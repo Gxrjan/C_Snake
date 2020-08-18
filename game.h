@@ -24,12 +24,20 @@ typedef struct node {
     struct node *next;
 } Node;
 
+typedef struct apple_node {
+    int i, j;
+    struct apple_node *next;
+} AppleNode;
+
 typedef struct queue {
     Node *head;
     Node *tail;
 } Queue;
+ 
+typedef Vector Apple;
 
 typedef struct game {
+    AppleNode *apples;
     Snake s;
     Queue q;
     pthread_mutex_t lock;
@@ -48,3 +56,9 @@ void enqueue(Queue *q, Dirchange change);
 Dirchange peak(Queue *q);
 Dirchange dequeue(Queue *q);
 int is_empty(Queue *q);
+int length(Game *g);
+int occupied_by_snake(Game *g, int i, int j);
+int occupied_by_apple(Game *g, int i, int j);
+void add_random_apple(Game *g);
+void add_random_apple_with_possibility(Game *g, int bound, int attempts);
+void step_back(Game *g);

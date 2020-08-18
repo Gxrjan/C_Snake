@@ -50,6 +50,16 @@ int is_empty(Queue *q)
     return q->head == NULL && q->tail == NULL;
 }
 
+int length(Game *g)
+{
+    pthread_mutex_lock(&(g->lock));
+    int result = 0;
+    for (Node *n=g->q.head;n!=NULL;n=n->next)
+        result++;
+    pthread_mutex_unlock(&(g->lock));
+    return result;
+}
+
 
 
 //int main(void)
