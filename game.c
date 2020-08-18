@@ -4,6 +4,7 @@
 #include<unistd.h>
 #include<pthread.h>
 #include<termios.h>
+#include<time.h>
 #define DELAY 300000
 
 
@@ -338,6 +339,10 @@ int main(int argc, char *argv[])
         printf("Error creating thread\n");
         exit(-1);
     }
+
+    // prepare randomness
+    time_t secs = time(NULL);
+    srand(secs);
 
     // prepare console for input
     struct termios oldattr, newattr;
