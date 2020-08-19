@@ -1,8 +1,16 @@
 #include<stdio.h>
 #include<pthread.h>
 
+#define ANSI_COLOR_RED "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
+
 typedef int *  Array;
 typedef int ** Matrix;
+
+
+
 
 typedef struct vector {
     int di, dj;

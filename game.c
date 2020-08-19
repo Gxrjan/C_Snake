@@ -36,7 +36,10 @@ void print_board(Game *g)
     for (int i=0;i<g->rows;i++)
         for (int j=0;j<g->columns;j++) {
             if (belongs_to_snake(&(g->s), g->len, i, j))
-                printf("%c", 'o');
+                if (g->s[0].i==i && g->s[0].j==j)
+                    printf(ANSI_COLOR_GREEN "%c" ANSI_COLOR_RESET, 'o');
+                else
+                    printf("%c", 'o');
             else if (occupied_by_apple(g, i, j))
                 printf("%c", 'a');
             else
@@ -272,7 +275,7 @@ void start(Game *g)
         usleep(DELAY);
         system("clear");
         print_board(g);
-        printf("%d\n", length(g));
+        //printf("%d\n", length(g));
     }
 }
 
